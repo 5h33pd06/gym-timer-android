@@ -89,7 +89,11 @@ private fun ClockAndRoundsSection(viewModel: GymTimerViewModel) {
     // way that a single row of round-indicator + clock + round-indicator collides
     // on narrow screens (see the mobile overlap fix); an Android phone is always
     // "narrow" by that standard, so stacking is the safe default here.
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         when (viewModel.mode) {
             Mode.TIMER -> {
                 // Single "ROUND #" line under the clock, rather than Tabata's
@@ -98,9 +102,25 @@ private fun ClockAndRoundsSection(viewModel: GymTimerViewModel) {
                 FixedWidthText(viewModel.timerRoundText, roundSize, Color.White, fontWeight = FontWeight.Bold)
             }
             Mode.TABATA -> {
-                FixedWidthText(viewModel.roundsLeftText, roundSize, Color.White, fontWeight = FontWeight.Bold)
+                // SET/INT fill the width like the big countdown does, rather
+                // than a fixed vw fraction.
+                FillWidthFixedText(
+                    text = viewModel.roundsLeftText,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    minFontSize = 20f,
+                    maxFontSize = 100f,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                )
                 FixedWidthText(viewModel.wallClockText, clockSize, clockColor)
-                FixedWidthText(viewModel.roundsRightText, roundSize, Color.White, fontWeight = FontWeight.Bold)
+                FillWidthFixedText(
+                    text = viewModel.roundsRightText,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    minFontSize = 20f,
+                    maxFontSize = 100f,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                )
             }
             Mode.STOPWATCH -> {
                 FixedWidthText(viewModel.wallClockText, clockSize, clockColor)
@@ -261,14 +281,16 @@ private fun TabataControls(viewModel: GymTimerViewModel) {
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PillButton(
-                "START TABATA",
-                { viewModel.startTabata() },
-                enabled = enabled,
-                accentBg = Color(0xFF554400),
-                accentBorder = Color(0xFF886600),
-                accentText = Color(0xFFFFCC00),
-            )
+            if (!viewModel.isRunning) {
+                PillButton(
+                    "START TABATA",
+                    { viewModel.startTabata() },
+                    enabled = enabled,
+                    accentBg = Color(0xFF554400),
+                    accentBorder = Color(0xFF886600),
+                    accentText = Color(0xFFFFCC00),
+                )
+            }
             StopButton(isRunning = viewModel.isRunning, isResume = viewModel.stopButtonIsResume, onClick = viewModel::handleTabataStopButton)
             ResetButton(onClick = viewModel::resetTimer)
         }
