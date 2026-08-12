@@ -113,10 +113,13 @@ private fun ClockAndRoundsSection(viewModel: GymTimerViewModel) {
 private fun BigDisplay(viewModel: GymTimerViewModel, color: Color) {
     val text = if (viewModel.mode == Mode.STOPWATCH) viewModel.stopwatchText else viewModel.displayText
 
-    if (viewModel.mode == Mode.TIMER) {
-        // Timer mode: always fill the screen width, regardless of whether the
-        // text is a single prep digit or something longer like "BREAK 45" -
-        // the font size adapts instead of using a fixed vw fraction.
+    if (viewModel.mode == Mode.TIMER || viewModel.mode == Mode.TABATA) {
+        // Timer and Tabata modes: always fill the screen width, regardless of
+        // whether the text is a single prep digit or something longer like
+        // "BREAK 45"/"REST 45" - the font size adapts instead of using a
+        // fixed vw fraction, while still keeping every digit a fixed width
+        // (FillWidthFixedText -> FixedWidthText underneath) so the display
+        // doesn't jitter as the digits themselves change.
         FillWidthFixedText(
             text = text,
             color = color,
