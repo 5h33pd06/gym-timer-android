@@ -26,7 +26,18 @@ fun GymTimerScreen(
 ) {
     val statusColor = AppColors.statusColor(viewModel.status, viewModel.isRedTheme)
 
-    Box(Modifier.fillMaxSize().background(AppColors.Background)) {
+    // navigationBarsPadding() keeps content (notably the bottom-pinned mode
+    // tabs) clear of the system nav bar - without it, the tabs render behind
+    // Android's back/home/recents buttons on devices with a taller nav bar
+    // than whatever we happened to test on (reported on a Galaxy S26 Ultra).
+    // The black background is applied first so it still extends edge-to-edge
+    // behind the system bar rather than leaving it a mismatched color.
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(AppColors.Background)
+            .navigationBarsPadding()
+    ) {
         // Progress bar - mirrors #progress-container/#progress-fill.
         Box(
             Modifier
