@@ -21,8 +21,6 @@ private fun String.digitsOnly() = filter { it.isDigit() }
 @Composable
 fun GymTimerScreen(
     viewModel: GymTimerViewModel,
-    immersive: Boolean,
-    onToggleImmersive: () -> Unit,
 ) {
     val statusColor = AppColors.statusColor(viewModel.status, viewModel.isRedTheme)
 
@@ -54,17 +52,6 @@ fun GymTimerScreen(
             )
         }
 
-        // Top-right icon row - mirrors .controls-top.
-        Row(
-            Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 20.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            IconCircleButton("🗣️", viewModel.isVoiceOn, AppColors.Go) { viewModel.toggleVoice() }
-            IconCircleButton(if (viewModel.isMuted) "🔇" else "🔊", viewModel.isMuted, AppColors.Warn) { viewModel.toggleMute() }
-            IconCircleButton("🎨", viewModel.isRedTheme, AppColors.RedThemeAccent) { viewModel.toggleTheme() }
-            IconCircleButton("⛶", immersive, Color.White, onClick = onToggleImmersive)
-        }
-
         Column(
             Modifier
                 .fillMaxSize()
@@ -87,6 +74,21 @@ fun GymTimerScreen(
                 Mode.TABATA -> TabataControls(viewModel)
                 Mode.STOPWATCH -> StopwatchControls(viewModel)
             }
+        }
+
+        // Top-right icon row - mirrors .controls-top. Declared AFTER the
+        // scrollable Column (not before it) so it draws on top and actually
+        // receives taps: a Box lays out children in declaration order and
+        // hit-tests the topmost one first, so when this sat before the
+        // fillMaxSize() Column, the Column's own touch/scroll handling was
+        // silently swallowing every tap intended for these buttons.
+        Row(
+            Modifier.align(Alignment.TopEnd).padding(top = 20.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            IconCircleButton("🗣️", viewModel.isVoiceOn, AppColors.Go) { viewModel.toggleVoice() }
+            IconCircleButton(if (viewModel.isMuted) "🔇" else "🔊", viewModel.isMuted, AppColors.Warn) { viewModel.toggleMute() }
+            IconCircleButton("🎨", viewModel.isRedTheme, AppColors.RedThemeAccent) { viewModel.toggleTheme() }
         }
 
         // Mode tabs pinned to the very bottom of the screen, rather than
@@ -187,11 +189,14 @@ private fun LabeledField(
     value: String,
     onValueChange: (String) -> Unit,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
+    fieldWidth: androidx.compose.ui.unit.Dp? = 60.dp,
+    labelFontSize: androidx.compose.ui.unit.TextUnit = 13.sp,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        SettingsLabel(label)
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = modifier) {
+        SettingsLabel(label, fontSize = labelFontSize)
         Spacer(Modifier.height(4.dp))
-        SmallField(value, onValueChange, enabled = enabled)
+        SmallField(value, onValueChange, enabled = enabled, width = fieldWidth)
     }
 }
 
@@ -276,18 +281,27 @@ private fun TimerControls(viewModel: GymTimerViewModel) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TabataControls(viewModel: GymTimerViewModel) {
     val enabled = !viewModel.isRunning
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         if (!viewModel.controlsHidden) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                LabeledField("WORK (s)", viewModel.tabWorkInput, { viewModel.tabWorkInput = it.digitsOnly() }, enabled)
-                LabeledField("REST (s)", viewModel.tabRestInput, { viewModel.tabRestInput = it.digitsOnly() }, enabled)
-                LabeledField("INT/SET", viewModel.tabIntervalsInput, { viewModel.tabIntervalsInput = it.digitsOnly() }, enabled)
-                LabeledField("SETS", viewModel.tabRoundsInput, { viewModel.tabRoundsInput = it.digitsOnly() }, enabled)
-                LabeledField("SET REST (s)", viewModel.tabSetRestInput, { viewModel.tabSetRestInput = it.digitsOnly() }, enabled)
+            // All five in one row that never wraps - each field shares the
+            // width equally and shrinks with the screen, rather than
+            // wrapping onto a second row on narrower phones.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                LabeledField("WORK", viewModel.tabWorkInput, { viewModel.tabWorkInput = it.digitsOnly() }, enabled, modifier = Modifier.weight(1f), fieldWidth = null, labelFontSize = 11.sp)
+                LabeledField("REST", viewModel.tabRestInput, { viewModel.tabRestInput = it.digitsOnly() }, enabled, modifier = Modifier.weight(1f), fieldWidth = null, labelFontSize = 11.sp)
+                LabeledField("INT/SET", viewModel.tabIntervalsInput, { viewModel.tabIntervalsInput = it.digitsOnly() }, enabled, modifier = Modifier.weight(1f), fieldWidth = null, labelFontSize = 11.sp)
+                LabeledField("SETS", viewModel.tabRoundsInput, { viewModel.tabRoundsInput = it.digitsOnly() }, enabled, modifier = Modifier.weight(1f), fieldWidth = null, labelFontSize = 11.sp)
+                LabeledField("SET REST", viewModel.tabSetRestInput, { viewModel.tabSetRestInput = it.digitsOnly() }, enabled, modifier = Modifier.weight(1f), fieldWidth = null, labelFontSize = 11.sp)
             }
         }
 

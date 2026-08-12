@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sh33pd06.gymtimer.ui.AppColors
 import com.sh33pd06.gymtimer.ui.GymTimerScreen
@@ -45,7 +44,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val viewModel: GymTimerViewModel = viewModel()
-            var immersive by remember { mutableStateOf(false) }
 
             // Keep the screen on while any timer is actively running - the
             // native equivalent of the web app's navigator.wakeLock use.
@@ -57,22 +55,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            LaunchedEffect(immersive) {
-                val controller = WindowInsetsControllerCompat(window, window.decorView)
-                if (immersive) {
-                    controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                    controller.systemBarsBehavior =
-                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                } else {
-                    controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                }
-            }
-
-            GymTimerScreen(
-                viewModel = viewModel,
-                immersive = immersive,
-                onToggleImmersive = { immersive = !immersive },
-            )
+            GymTimerScreen(viewModel = viewModel)
         }
     }
 }
@@ -284,17 +267,33 @@ fun SmallField(
             ),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
             decorationBox = { innerTextField ->
-                Box(contentAlignment = Alignment.Center) {
-                    if (value.isEmpty() && placeholder != null) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        if (value.isEmpty() && placeholder != null) {
+                            Text(
+                                placeholder,
+                                color = Color(0xFF666666),
+                                fontFamily = Orbitron,
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                        innerTextField()
+                    }
+                    // Explicit tap target to submit, rather than relying on the
+                    // keyboard's IME action - a numeric keypad often has no
+                    // visible Done/Go key on many OEM keyboards, which made the
+                    // custom round-time field otherwise impossible to submit.
+                    if (onSubmit != null) {
                         Text(
-                            placeholder,
-                            color = Color(0xFF666666),
-                            fontFamily = Orbitron,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center,
+                            "▶",
+                            color = AppColors.Go,
+                            fontSize = 13.sp,
+                            modifier = Modifier
+                                .clickable(enabled = enabled) { onSubmit() }
+                                .padding(start = 2.dp, end = 4.dp),
                         )
                     }
-                    innerTextField()
                 }
             },
         )
@@ -302,6 +301,13 @@ fun SmallField(
 }
 
 @Composable
-fun SettingsLabel(text: String) {
-    Text(text, color = Color(0xFF888888), fontSize = 13.sp, fontFamily = Orbitron)
+fun SettingsLabel(text: String, fontSize: TextUnit = 13.sp) {
+    Text(
+        text,
+        color = Color(0xFF888888),
+        fontSize = fontSize,
+        fontFamily = Orbitron,
+        maxLines = 1,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+    )
 }
