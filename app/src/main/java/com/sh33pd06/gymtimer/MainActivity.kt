@@ -145,11 +145,31 @@ fun FillWidthFixedText(
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         val availableWidthPx = with(density) { maxWidth.toPx() }
         val referenceSp = 100f
-        val naturalWidthPx = remember(text, fontWeight) {
-            textMeasurer.measure(
-                text = text,
-                style = TextStyle(fontFamily = Orbitron, fontWeight = fontWeight, fontSize = referenceSp.sp),
-            ).size.width.toFloat().coerceAtLeast(1f)
+        // Measuring the whole string's *real* glyph widths would make the
+        // scale factor depend on which specific digits are showing (a "1" is
+        // narrower than an "8" in this font) - even though FixedWidthText
+        // renders every digit into an identical fixed-width slot regardless
+        // of its value. That mismatch was making the whole display grow and
+        // shrink on every tick. So width here must be computed the same way
+        // FixedWidthText renders it: a constant per-digit contribution
+        // (matching its 0.72*fontSize slot) plus the real measured width of
+        // each non-digit character (colon, space, letters), which don't vary
+        // with neighboring digits.
+        val naturalWidthPx = remember(text, fontWeight, density) {
+            val referenceFontSizePx = with(density) { referenceSp.sp.toPx() }
+            val digitSlotPx = referenceFontSizePx * 0.72f
+            var total = 0f
+            for (ch in text) {
+                total += if (ch.isDigit()) {
+                    digitSlotPx
+                } else {
+                    textMeasurer.measure(
+                        text = if (ch == ' ') " " else ch.toString(),
+                        style = TextStyle(fontFamily = Orbitron, fontWeight = fontWeight, fontSize = referenceSp.sp),
+                    ).size.width.toFloat()
+                }
+            }
+            total.coerceAtLeast(1f)
         }
         val targetSp = (referenceSp * (availableWidthPx / naturalWidthPx)).coerceIn(minFontSize, maxFontSize)
         FixedWidthText(text = text, fontSize = targetSp.sp, color = color, fontWeight = fontWeight)
