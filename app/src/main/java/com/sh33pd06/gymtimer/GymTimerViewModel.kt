@@ -618,11 +618,20 @@ class GymTimerViewModel(application: Application) : AndroidViewModel(application
     // ------------------------ STOPWATCH -----------------------------
     // ===========================================================
 
+    // Newest lap first, like most stopwatch apps.
+    // A SnapshotStateList mutates in place (add/clear), so it doesn't need a
+    // setter to be reassigned - only the ViewModel calls add()/clear() on it.
+    val laps = androidx.compose.runtime.mutableStateListOf<LapEntry>()
+    private var lastLapElapsedMs = 0L
+
     fun startStopwatch() {
         if (stopwatchRunning) return
         stopwatchRunning = true
         status = Status.GO
         progressPercent = 100f
+        // Hide the mode tabs while the stopwatch is running, same as
+        // Timer/Tabata hide their own controls while active.
+        controlsHidden = true
 
         stopwatchStartAnchor = System.currentTimeMillis() - stopwatchElapsedMs
         stopwatchJob?.cancel()
@@ -640,19 +649,34 @@ class GymTimerViewModel(application: Application) : AndroidViewModel(application
         stopwatchJob?.cancel()
         stopwatchRunning = false
         status = Status.READY
+        controlsHidden = false
     }
 
     fun resetStopwatch() {
         stopStopwatch()
         stopwatchElapsedMs = 0
+        lastLapElapsedMs = 0
+        laps.clear()
         renderStopwatch(0)
     }
 
+    fun recordLap() {
+        if (!stopwatchRunning) return
+        val total = stopwatchElapsedMs
+        val split = total - lastLapElapsedMs
+        lastLapElapsedMs = total
+        laps.add(0, LapEntry(number = laps.size + 1, lapText = formatMs(split), totalText = formatMs(total)))
+    }
+
     private fun renderStopwatch(elapsedMs: Long) {
+        stopwatchText = formatMs(elapsedMs)
+    }
+
+    private fun formatMs(elapsedMs: Long): String {
         val minutes = elapsedMs / 60000
         val seconds = (elapsedMs % 60000) / 1000
         val hundredths = (elapsedMs % 1000) / 10
-        stopwatchText = "${pad(minutes)}:${pad(seconds)}.${pad(hundredths)}"
+        return "${pad(minutes)}:${pad(seconds)}.${pad(hundredths)}"
     }
 
     private fun pad(n: Long): String = n.toString().padStart(2, '0')

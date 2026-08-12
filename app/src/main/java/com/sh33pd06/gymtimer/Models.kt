@@ -16,3 +16,7 @@ enum class TabataPhase { IDLE, PREP, WORK, REST, SET_REST, DONE }
  * classes; Tabata no longer shrinks (per later request), so only NORMAL/BREAK/STOPWATCH
  * remain in practice, but DisplayVariant stays generic. */
 enum class DisplayVariant { NORMAL, BREAK, STOPWATCH }
+
+/** One recorded stopwatch lap. [lapText] is the split since the previous lap (or
+ * start); [totalText] is the cumulative elapsed time at the moment it was recorded. */
+data class LapEntry(val number: Int, val lapText: String, val totalText: String)

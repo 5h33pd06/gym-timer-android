@@ -5,12 +5,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sh33pd06.gymtimer.*
 
 private fun String.digitsOnly() = filter { it.isDigit() }
@@ -133,31 +136,16 @@ private fun ClockAndRoundsSection(viewModel: GymTimerViewModel) {
 private fun BigDisplay(viewModel: GymTimerViewModel, color: Color) {
     val text = if (viewModel.mode == Mode.STOPWATCH) viewModel.stopwatchText else viewModel.displayText
 
-    if (viewModel.mode == Mode.TIMER || viewModel.mode == Mode.TABATA) {
-        // Timer and Tabata modes: always fill the screen width, regardless of
-        // whether the text is a single prep digit or something longer like
-        // "BREAK 45"/"REST 45" - the font size adapts instead of using a
-        // fixed vw fraction, while still keeping every digit a fixed width
-        // (FillWidthFixedText -> FixedWidthText underneath) so the display
-        // doesn't jitter as the digits themselves change.
-        FillWidthFixedText(
-            text = text,
-            color = color,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-        )
-    } else {
-        val fraction = when (viewModel.displayVariant) {
-            DisplayVariant.NORMAL -> 0.20f
-            DisplayVariant.BREAK -> 0.14f
-            DisplayVariant.STOPWATCH -> 0.13f
-        }
-        FixedWidthText(
-            text = text,
-            fontSize = vw(fraction),
-            color = color,
-            modifier = Modifier.padding(vertical = 8.dp),
-        )
-    }
+    // Every mode fills the screen width, regardless of whether the text is a
+    // single prep digit or something longer like "BREAK 45" - the font size
+    // adapts instead of using a fixed vw fraction, while still keeping every
+    // digit a fixed width (FillWidthFixedText -> FixedWidthText underneath)
+    // so the display doesn't jitter as the digits themselves change.
+    FillWidthFixedText(
+        text = text,
+        color = color,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+    )
 }
 
 @Composable
@@ -299,24 +287,61 @@ private fun TabataControls(viewModel: GymTimerViewModel) {
 
 @Composable
 private fun StopwatchControls(viewModel: GymTimerViewModel) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        PillButton(
-            "START",
-            viewModel::startStopwatch,
-            enabled = !viewModel.stopwatchRunning,
-            accentBg = Color(0xFF003300),
-            accentBorder = Color(0xFF005500),
-            accentText = AppColors.Go,
-        )
-        PillButton(
-            "STOP",
-            viewModel::stopStopwatch,
-            enabled = viewModel.stopwatchRunning,
-            accentBg = Color(0xFF330000),
-            accentBorder = Color(0xFF550000),
-            accentText = AppColors.Warn,
-        )
-        ResetButton(onClick = viewModel::resetStopwatch)
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PillButton(
+                "START",
+                viewModel::startStopwatch,
+                enabled = !viewModel.stopwatchRunning,
+                accentBg = Color(0xFF003300),
+                accentBorder = Color(0xFF005500),
+                accentText = AppColors.Go,
+            )
+            PillButton(
+                "LAP",
+                viewModel::recordLap,
+                enabled = viewModel.stopwatchRunning,
+                accentBg = Color(0xFF002244),
+                accentBorder = Color(0xFF004488),
+                accentText = Color(0xFF66AAFF),
+            )
+            PillButton(
+                "STOP",
+                viewModel::stopStopwatch,
+                enabled = viewModel.stopwatchRunning,
+                accentBg = Color(0xFF330000),
+                accentBorder = Color(0xFF550000),
+                accentText = AppColors.Warn,
+            )
+            ResetButton(onClick = viewModel::resetStopwatch)
+        }
+
+        if (viewModel.laps.isNotEmpty()) {
+            LapList(viewModel.laps)
+        }
+    }
+}
+
+@Composable
+private fun LapList(laps: List<LapEntry>) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text("LAP", modifier = Modifier.weight(1f), color = Color(0xFF888888), fontFamily = Orbitron, fontSize = 12.sp)
+            Text("SPLIT", modifier = Modifier.weight(1f), color = Color(0xFF888888), fontFamily = Orbitron, fontSize = 12.sp, textAlign = TextAlign.Center)
+            Text("TOTAL", modifier = Modifier.weight(1f), color = Color(0xFF888888), fontFamily = Orbitron, fontSize = 12.sp, textAlign = TextAlign.End)
+        }
+        for (lap in laps) {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text("#${lap.number}", modifier = Modifier.weight(1f), color = Color.White, fontFamily = Orbitron, fontSize = 15.sp)
+                Text(lap.lapText, modifier = Modifier.weight(1f), color = Color.White, fontFamily = Orbitron, fontSize = 15.sp, textAlign = TextAlign.Center)
+                Text(lap.totalText, modifier = Modifier.weight(1f), color = Color(0xFFAAAAAA), fontFamily = Orbitron, fontSize = 15.sp, textAlign = TextAlign.End)
+            }
+        }
     }
 }
 
