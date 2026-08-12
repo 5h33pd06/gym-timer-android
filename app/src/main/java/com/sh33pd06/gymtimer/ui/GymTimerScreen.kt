@@ -58,7 +58,10 @@ fun GymTimerScreen(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(top = 64.dp, bottom = 32.dp, start = 12.dp, end = 12.dp),
+                // Extra bottom padding leaves room for the mode tabs pinned
+                // to the bottom of the screen below, so they don't overlap
+                // the last row of mode-specific controls.
+                .padding(top = 64.dp, bottom = 96.dp, start = 12.dp, end = 12.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -68,15 +71,24 @@ fun GymTimerScreen(
             BigDisplay(viewModel, statusColor)
             Spacer(Modifier.height(20.dp))
 
-            if (!viewModel.controlsHidden) {
-                ModeTabsRow(viewModel)
-                Spacer(Modifier.height(16.dp))
-            }
-
             when (viewModel.mode) {
                 Mode.TIMER -> TimerControls(viewModel)
                 Mode.TABATA -> TabataControls(viewModel)
                 Mode.STOPWATCH -> StopwatchControls(viewModel)
+            }
+        }
+
+        // Mode tabs pinned to the very bottom of the screen, rather than
+        // scrolling with the rest of the content.
+        if (!viewModel.controlsHidden) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                ModeTabsRow(viewModel)
             }
         }
     }
