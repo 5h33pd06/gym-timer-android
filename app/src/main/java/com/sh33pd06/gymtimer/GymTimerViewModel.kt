@@ -44,11 +44,13 @@ class GymTimerViewModel(application: Application) : AndroidViewModel(application
         private set
     var displayVariant by mutableStateOf(DisplayVariant.NORMAL)
         private set
-    var roundsLeftText by mutableStateOf("R0 -")
+    // Tabata's SET x/y and INT x/y indicators either side of the clock.
+    var roundsLeftText by mutableStateOf("SET")
         private set
-    var roundsRightText by mutableStateOf("- R0")
+    var roundsRightText by mutableStateOf("INT")
         private set
-    var roundsVisible by mutableStateOf(true)
+    // Timer mode's single "ROUND #" line under the clock.
+    var timerRoundText by mutableStateOf("ROUND 0")
         private set
     var progressPercent by mutableStateOf(100f)
         private set
@@ -139,7 +141,6 @@ class GymTimerViewModel(application: Application) : AndroidViewModel(application
         resetDisplayForMode()
 
         clockIsMini = newMode == Mode.TABATA
-        roundsVisible = newMode != Mode.STOPWATCH
         controlsHidden = false
 
         if (newMode == Mode.STOPWATCH) {
@@ -168,8 +169,7 @@ class GymTimerViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun updateRoundsDisplay(count: Int) {
-        roundsLeftText = "R$count -"
-        roundsRightText = "- R$count"
+        timerRoundText = "ROUND $count"
     }
 
     private fun renderDisplay(text: String) {

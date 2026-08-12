@@ -90,30 +90,51 @@ private fun ClockAndRoundsSection(viewModel: GymTimerViewModel) {
     // on narrow screens (see the mobile overlap fix); an Android phone is always
     // "narrow" by that standard, so stacking is the safe default here.
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        if (viewModel.roundsVisible) {
-            FixedWidthText(viewModel.roundsLeftText, roundSize, Color.White, fontWeight = FontWeight.Bold)
-        }
-        FixedWidthText(viewModel.wallClockText, clockSize, clockColor)
-        if (viewModel.roundsVisible) {
-            FixedWidthText(viewModel.roundsRightText, roundSize, Color.White, fontWeight = FontWeight.Bold)
+        when (viewModel.mode) {
+            Mode.TIMER -> {
+                // Single "ROUND #" line under the clock, rather than Tabata's
+                // two-sided SET/INT layout - Timer mode only has one counter.
+                FixedWidthText(viewModel.wallClockText, clockSize, clockColor)
+                FixedWidthText(viewModel.timerRoundText, roundSize, Color.White, fontWeight = FontWeight.Bold)
+            }
+            Mode.TABATA -> {
+                FixedWidthText(viewModel.roundsLeftText, roundSize, Color.White, fontWeight = FontWeight.Bold)
+                FixedWidthText(viewModel.wallClockText, clockSize, clockColor)
+                FixedWidthText(viewModel.roundsRightText, roundSize, Color.White, fontWeight = FontWeight.Bold)
+            }
+            Mode.STOPWATCH -> {
+                FixedWidthText(viewModel.wallClockText, clockSize, clockColor)
+            }
         }
     }
 }
 
 @Composable
 private fun BigDisplay(viewModel: GymTimerViewModel, color: Color) {
-    val fraction = when (viewModel.displayVariant) {
-        DisplayVariant.NORMAL -> 0.20f
-        DisplayVariant.BREAK -> 0.14f
-        DisplayVariant.STOPWATCH -> 0.13f
-    }
     val text = if (viewModel.mode == Mode.STOPWATCH) viewModel.stopwatchText else viewModel.displayText
-    FixedWidthText(
-        text = text,
-        fontSize = vw(fraction),
-        color = color,
-        modifier = Modifier.padding(vertical = 8.dp),
-    )
+
+    if (viewModel.mode == Mode.TIMER) {
+        // Timer mode: always fill the screen width, regardless of whether the
+        // text is a single prep digit or something longer like "BREAK 45" -
+        // the font size adapts instead of using a fixed vw fraction.
+        FillWidthFixedText(
+            text = text,
+            color = color,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+        )
+    } else {
+        val fraction = when (viewModel.displayVariant) {
+            DisplayVariant.NORMAL -> 0.20f
+            DisplayVariant.BREAK -> 0.14f
+            DisplayVariant.STOPWATCH -> 0.13f
+        }
+        FixedWidthText(
+            text = text,
+            fontSize = vw(fraction),
+            color = color,
+            modifier = Modifier.padding(vertical = 8.dp),
+        )
+    }
 }
 
 @Composable
@@ -144,7 +165,11 @@ private fun LabeledField(
 @Composable
 private fun TimerControls(viewModel: GymTimerViewModel) {
     val enabled = !viewModel.isRunning
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
         if (!viewModel.controlsHidden) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 LabeledField("ROUNDS (blank=∞)", viewModel.maxRoundsInput, { viewModel.maxRoundsInput = it.digitsOnly() }, enabled)
@@ -153,29 +178,48 @@ private fun TimerControls(viewModel: GymTimerViewModel) {
         }
 
         if (!viewModel.controlsHidden) {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SmallField(
-                    value = viewModel.customRoundInput,
-                    onValueChange = viewModel::onCustomRoundInputChange,
-                    enabled = enabled,
-                    width = 90.dp,
-                    placeholder = "MM:SS",
-                    onSubmit = viewModel::handleCustomRoundSubmit,
-                )
-                for (m in intArrayOf(1, 3, 4, 5, 7, 10)) {
-                    val id = "btn-${m}m"
-                    PillButton("${m}m", { viewModel.handleTimerPreset(m, id) }, enabled = enabled, active = viewModel.activePresetId == id)
+            // 4-and-4 grid, evenly spaced: [MM:SS, 1m, 3m, 4m] / [5m, 7m, 10m, RND].
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SmallField(
+                        value = viewModel.customRoundInput,
+                        onValueChange = viewModel::onCustomRoundInputChange,
+                        enabled = enabled,
+                        width = null,
+                        placeholder = "MM:SS",
+                        onSubmit = viewModel::handleCustomRoundSubmit,
+                        modifier = Modifier.weight(1f),
+                    )
+                    for (m in intArrayOf(1, 3, 4)) {
+                        val id = "btn-${m}m"
+                        PillButton(
+                            "${m}m", { viewModel.handleTimerPreset(m, id) },
+                            enabled = enabled, active = viewModel.activePresetId == id,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
-                PillButton("RND", { viewModel.handleRandomPreset("btn-rnd") }, enabled = enabled, active = viewModel.activePresetId == "btn-rnd")
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (m in intArrayOf(5, 7, 10)) {
+                        val id = "btn-${m}m"
+                        PillButton(
+                            "${m}m", { viewModel.handleTimerPreset(m, id) },
+                            enabled = enabled, active = viewModel.activePresetId == id,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    PillButton(
+                        "RND", { viewModel.handleRandomPreset("btn-rnd") },
+                        enabled = enabled, active = viewModel.activePresetId == "btn-rnd",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
-
-        StopResetRow(
-            isRunning = viewModel.isRunning,
-            isResume = viewModel.stopButtonIsResume,
-            onStop = viewModel::handleTimerStopButton,
-            onReset = viewModel::resetTimer,
-        )
 
         if (!viewModel.controlsHidden) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -188,6 +232,13 @@ private fun TimerControls(viewModel: GymTimerViewModel) {
                 }
             }
         }
+
+        StopResetRow(
+            isRunning = viewModel.isRunning,
+            isResume = viewModel.stopButtonIsResume,
+            onStop = viewModel::handleTimerStopButton,
+            onReset = viewModel::resetTimer,
+        )
     }
 }
 

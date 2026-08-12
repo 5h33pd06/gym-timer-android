@@ -125,6 +125,37 @@ fun FixedWidthText(
     }
 }
 
+/**
+ * Like [FixedWidthText], but picks whatever font size makes the text fill the
+ * available width, rather than a fixed vw-style fraction. Used for the Timer
+ * mode countdown, which should always span edge to edge regardless of whether
+ * it's showing a single prep digit or "BREAK 45".
+ */
+@Composable
+fun FillWidthFixedText(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    fontWeight: FontWeight = FontWeight.Black,
+    minFontSize: Float = 32f,
+    maxFontSize: Float = 260f,
+) {
+    val textMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val availableWidthPx = with(density) { maxWidth.toPx() }
+        val referenceSp = 100f
+        val naturalWidthPx = remember(text, fontWeight) {
+            textMeasurer.measure(
+                text = text,
+                style = TextStyle(fontFamily = Orbitron, fontWeight = fontWeight, fontSize = referenceSp.sp),
+            ).size.width.toFloat().coerceAtLeast(1f)
+        }
+        val targetSp = (referenceSp * (availableWidthPx / naturalWidthPx)).coerceIn(minFontSize, maxFontSize)
+        FixedWidthText(text = text, fontSize = targetSp.sp, color = color, fontWeight = fontWeight)
+    }
+}
+
 @Composable
 fun IconCircleButton(
     emoji: String,
@@ -192,7 +223,7 @@ fun SmallField(
     onValueChange: (String) -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
-    width: Dp = 60.dp,
+    width: Dp? = 60.dp,
     placeholder: String? = null,
     onSubmit: (() -> Unit)? = null,
 ) {
@@ -201,9 +232,11 @@ fun SmallField(
     // left almost no room for text in these small ~60dp boxes (values were
     // rendering as an unreadable clipped sliver of a single digit).
     val borderColor = if (enabled) Color(0xFF444444) else Color(0xFF333333)
+    // width == null means "fill whatever space the parent gave this modifier"
+    // (e.g. Modifier.weight(1f) in a Row) rather than a fixed size.
+    val sizeModifier = if (width != null) modifier.width(width) else modifier.fillMaxWidth()
     Box(
-        modifier = modifier
-            .width(width)
+        modifier = sizeModifier
             .height(44.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(if (enabled) Color(0xFF222222) else Color(0xFF1A1A1A))
